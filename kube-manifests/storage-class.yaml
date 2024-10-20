@@ -1,0 +1,9 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: my-storage-class
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp2  
+reclaimPolicy: Delete  
+volumeBindingMode: WaitForFirstConsumer #this will ensure that before the persistent volume allocation to the new pod the ebs volume should be created dunamically and then it is assigned to that pod
