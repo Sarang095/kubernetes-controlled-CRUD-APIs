@@ -2,6 +2,7 @@ version: '3.8'
 services:
   product-service:
     image: csag095/product-service:${BUILD_NUMBER} 
+    restart: always
     environment:
       - DATABASE_URL=jdbc:mysql://mysql-db:3306/service_db
       - DATABASE_USERNAME=admin
