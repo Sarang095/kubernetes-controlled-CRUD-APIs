@@ -14,6 +14,9 @@ pipeline {
         scannerHome = tool 'sonar4'
         HELM_VALUES_REPO = 'https://github.com/Sarang095/kube-manifests.git'
         HELM_CREDENTIALS_ID = 'helm-repo-credentials'
+        HELM_REPO_NAME = 'kube-manifests'  
+        HELM_REPO_BRANCH = 'main'          
+        HELM_CHART_PATH = 'values-repo/helm-kube'  
     }
 
     stages {
@@ -137,14 +140,14 @@ pipeline {
                 script {
                     def buildNumber = currentBuild.number
                     withCredentials([string(credentialsId: 'GITHUB_OAUTH_TOKEN', variable: 'OAUTH_TOKEN')]) {
-                        sh "git clone https://${OAUTH_TOKEN}@github.com/Sarang095/kube-manifests.git values-repo"
+                        sh "git clone https://${OAUTH_TOKEN}@github.com/${HELM_REPO_NAME}.git values-repo"
                     }
-                    dir("values-repo/helm-kube") {
+                    dir("${HELM_CHART_PATH}") {
                         sh "sed -i 's/replicas: .*/replicas: 2/' values.yaml"
                         sh "sed -i 's|repository: .*|repository: ${DOCKER_IMAGE_NAME}|' values.yaml"
                         sh "sed -i 's/tag: .*/tag: ${buildNumber}/' values.yaml"
                         sh "git commit -am 'Updating image tag to ${buildNumber}'"
-                        sh "git push origin main"
+                        sh "git push origin ${HELM_REPO_BRANCH}"
                     }
                 }
             }
@@ -165,4 +168,5 @@ pipeline {
         }
     }
 }
+
 
