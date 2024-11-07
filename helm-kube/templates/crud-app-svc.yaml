@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-crud-app-service
+  labels:
+    app: java-crud-app
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  clusterIP: NodePort
+  selector:
+    app: java-crud-app

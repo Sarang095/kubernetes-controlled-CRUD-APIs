@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-crud-app
+  labels:
+    app: java-crud-app
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: java-crud-app
+  template:
+    metadata:
+      labels:
+        app: java-crud-app
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: java-crud-app
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: java-crud-app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: "jdbc:mysql://my-sql-server:3306/mydb"
+            - name: DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-username
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef: 
+                  name: mysql-secret
+                  key: mysql-password
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox
+          command: ['sh', '-c', 'until nc -z my-sql-server 3306; do echo waiting for mysql; sleep 2; done;']
