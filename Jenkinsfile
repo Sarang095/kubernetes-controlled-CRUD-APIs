@@ -26,6 +26,18 @@ pipeline {
             }
         }
 
+        stage('UNIT TEST'){
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+	    stage('INTEGRATION TEST'){
+            steps {
+                sh 'mvn verify -DskipUnitTests'
+            }
+        }
+
         stage ('CODE ANALYSIS WITH CHECKSTYLE') {
             steps {
                 sh 'mvn -s $WORKSPACE/settings.xml checkstyle:checkstyle'
@@ -45,6 +57,7 @@ pipeline {
                         -Dsonar.projectName=java-crud-repo \
                         -Dsonar.projectVersion=1.0 \
                         -Dsonar.sources=src/ \
+                        -Dsonar.java.binaries=target/test-classes/com/joesalt/tutorial/ \
                         -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
 
