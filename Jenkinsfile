@@ -67,6 +67,19 @@ pipeline {
             }
         }
 
+	stage('Install Trivy') {
+            steps {
+                script {
+                    def trivyInstalled = sh(script: 'which trivy', returnStatus: true) == 0
+                    if (!trivyInstalled) {
+                        sh 'curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh'
+                    } else {
+                        echo 'Trivy is already installed'
+                    }
+                }
+            }
+        }
+
         stage('Vulnerability Scan - Source') {
             steps {
                 sh 'trivy fs --exit-code 1 --severity HIGH src/'
