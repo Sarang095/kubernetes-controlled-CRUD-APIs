@@ -8,14 +8,14 @@ pipeline {
         DOCKER_IMAGE_NAME = 'csag095/java-crud-main'
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "172.31.40.209:8081"
+        NEXUS_URL = "172.31.18.140:8081"
         NEXUS_REPOSITORY = "crud-main-app"
         NEXUS_CREDENTIAL_ID = "nexuslogin"
         scannerHome = tool 'sonar4'
         HELM_VALUES_REPO = 'https://github.com/Sarang095/kube-manifests.git'
         HELM_CREDENTIALS_ID = 'helm-repo-credentials'
         HELM_REPO_NAME = 'kube-manifests'  
-        HELM_REPO_BRANCH = 'main'          
+        HELM_REPO_BRANCH = 'master'          
         HELM_CHART_PATH = 'values-repo/helm-kube'  
     }
 
@@ -84,7 +84,7 @@ pipeline {
                             protocol: NEXUS_PROTOCOL,
                             nexusUrl: NEXUS_URL,
                             groupId: pom.groupId,
-                            version: pom.version,
+                            version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
                             repository: NEXUS_REPOSITORY,
                             credentialsId: NEXUS_CREDENTIAL_ID,
                             artifacts: [
