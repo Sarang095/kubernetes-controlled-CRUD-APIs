@@ -8,7 +8,7 @@ pipeline {
         DOCKER_IMAGE_NAME = 'csag095/java-crud-main'
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "172.31.40.209:8081"
+        NEXUS_URL = "172.31.47.246:8081"
         NEXUS_REPOSITORY = "crud-main-app"
         NEXUS_CREDENTIAL_ID = "nexuslogin"
         scannerHome = tool 'sonar4'
