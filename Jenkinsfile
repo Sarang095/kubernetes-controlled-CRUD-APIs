@@ -8,31 +8,32 @@ pipeline {
         DOCKER_IMAGE_NAME = 'csag095/java-crud-main'
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "172.31.18.140:8081"
+        NEXUS_URL = "44.211.81.110:8081"
         NEXUS_REPOSITORY = "crud-main-app"
         NEXUS_CREDENTIAL_ID = "nexuslogin"
         scannerHome = tool 'sonar4'
         HELM_VALUES_REPO = 'https://github.com/Sarang095/kube-manifests.git'
         HELM_CREDENTIALS_ID = 'helm-repo-credentials'
-        HELM_REPO_NAME = 'kube-manifests'  
-        HELM_REPO_BRANCH = 'master'          
-        HELM_CHART_PATH = 'values-repo/helm-kube'  
+        HELM_REPO_NAME = 'kube-manifests'
+        HELM_REPO_BRANCH = 'master'
+        HELM_CHART_PATH = 'values-repo/helm-kube'
+        PATH = "${env.WORKSPACE}/bin:${env.PATH}"
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                checkout scm
+                git 'https://github.com/Sarang095/kubernetes-controlled-CRUD-APIs.git'
             }
         }
 
-        stage('UNIT TEST'){
+        stage('UNIT TEST') {
             steps {
                 sh 'mvn test'
             }
         }
 
-	    stage('INTEGRATION TEST'){
+        stage('INTEGRATION TEST') {
             steps {
                 sh 'mvn verify -DskipUnitTests'
             }
@@ -67,12 +68,15 @@ pipeline {
             }
         }
 
-	stage('Install Trivy') {
+        stage('Install Trivy') {
             steps {
                 script {
                     def trivyInstalled = sh(script: 'which trivy', returnStatus: true) == 0
                     if (!trivyInstalled) {
-                        sh 'curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh'
+                        sh '''
+                        mkdir -p ${WORKSPACE}/bin
+                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ${WORKSPACE}/bin
+                        '''
                     } else {
                         echo 'Trivy is already installed'
                     }
@@ -95,28 +99,33 @@ pipeline {
         stage("Publish to Nexus Repository Manager") {
             steps {
                 script {
-                    pom = readMavenPom file: "pom.xml"
-                    filesByGlob = findFiles(glob: "target/crud-v1.jar")
-                    echo "${filesByGlob[0].name} ${filesByGlob[0].path}"
-                    artifactPath = filesByGlob[0].path
-                    artifactExists = fileExists artifactPath
-                    if (artifactExists) {
-                        echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version}"
+                    def artifactPath = "target/crud-v1.jar" // Path to the JAR file after package
+                    // Format version with only digits and periods
+                    def version = "${env.BUILD_ID}.${env.BUILD_TIMESTAMP.replaceAll('[^\\d]', '')}"
+                    
+                    // Debugging: Print Nexus URL, Version, Artifact Details
+                    echo "*** Nexus URL: ${NEXUS_PROTOCOL}://${NEXUS_URL}/repository/${NEXUS_REPOSITORY}/"
+                    echo "*** Version to be uploaded: ${version}"
+                    echo "*** Artifact Path: ${artifactPath}"
+
+                    if (fileExists(artifactPath)) {
+                        echo "*** Uploading ${artifactPath} to Nexus Repository ${NEXUS_REPOSITORY} with version ${version}"
+                        
                         nexusArtifactUploader(
                             nexusVersion: NEXUS_VERSION,
                             protocol: NEXUS_PROTOCOL,
-                            nexusUrl: NEXUS_URL,
-                            groupId: pom.groupId,
-                            version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
+                            nexusUrl: "${NEXUS_URL}",
+                            groupId: "com.joesalt",
+                            version: version, // Version without special characters
                             repository: NEXUS_REPOSITORY,
                             credentialsId: NEXUS_CREDENTIAL_ID,
                             artifacts: [
-                                [artifactId: pom.artifactId, file: artifactPath, type: pom.packaging],
-                                [artifactId: pom.artifactId, file: "pom.xml", type: "pom"]
+                                [artifactId: "tutorial", file: artifactPath, type: "jar"],
+                                [artifactId: "tutorial", file: "pom.xml", type: "pom"]
                             ]
                         )
                     } else {
-                        error "*** File: ${artifactPath}, could not be found"
+                        error "*** File: ${artifactPath} could not be found"
                     }
                 }
             }
@@ -169,6 +178,21 @@ pipeline {
                         sh "sed -i 's/replicas: .*/replicas: 2/' values.yaml"
                         sh "sed -i 's|repository: .*|repository: ${DOCKER_IMAGE_NAME}|' values.yaml"
                         sh "sed -i 's/tag: .*/tag: ${buildNumber}/' values.yaml"
+                    }
+                }
+            }
+        }
+
+        stage('Trivy Config Scan - Helm Manifests') {
+            steps {
+                sh 'trivy config --exit-code 1 --severity HIGH values-repo/helm-kube/templates/'
+            }
+        }
+
+        stage('Commit and Push Updated Helm Chart') {
+            steps {
+                script {
+                    dir("${HELM_CHART_PATH}") {
                         sh "git commit -am 'Updating image tag to ${buildNumber}'"
                         sh "git push origin ${HELM_REPO_BRANCH}"
                     }
@@ -191,5 +215,3 @@ pipeline {
         }
     }
 }
-
-
