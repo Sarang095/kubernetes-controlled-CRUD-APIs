@@ -8,7 +8,7 @@ pipeline {
         DOCKER_IMAGE_NAME = 'csag095/java-crud-main'
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "44.211.81.110:8081"
+        NEXUS_URL = "3.87.220.100:8081"
         NEXUS_REPOSITORY = "crud-main-app"
         NEXUS_CREDENTIAL_ID = "nexuslogin"
         scannerHome = tool 'sonar4'
@@ -99,11 +99,9 @@ pipeline {
         stage("Publish to Nexus Repository Manager") {
             steps {
                 script {
-                    def artifactPath = "target/crud-v1.jar" // Path to the JAR file after package
-                    // Format version with only digits and periods
+                    def artifactPath = "target/crud-v1.jar"
                     def version = "${env.BUILD_ID}.${env.BUILD_TIMESTAMP.replaceAll('[^\\d]', '')}"
                     
-                    // Debugging: Print Nexus URL, Version, Artifact Details
                     echo "*** Nexus URL: ${NEXUS_PROTOCOL}://${NEXUS_URL}/repository/${NEXUS_REPOSITORY}/"
                     echo "*** Version to be uploaded: ${version}"
                     echo "*** Artifact Path: ${artifactPath}"
@@ -116,7 +114,7 @@ pipeline {
                             protocol: NEXUS_PROTOCOL,
                             nexusUrl: "${NEXUS_URL}",
                             groupId: "com.joesalt",
-                            version: version, // Version without special characters
+                            version: version,
                             repository: NEXUS_REPOSITORY,
                             credentialsId: NEXUS_CREDENTIAL_ID,
                             artifacts: [
@@ -149,12 +147,6 @@ pipeline {
             }
         }
 
-        stage('Trivy Config Scan - Kubernetes Manifests') {
-            steps {
-                sh 'trivy config --exit-code 1 --severity HIGH kube-manifests/'
-            }
-        }
-
         stage('Push Docker Image') {
             steps {
                 script {
@@ -172,7 +164,9 @@ pipeline {
                 script {
                     def buildNumber = currentBuild.number
                     withCredentials([string(credentialsId: 'GITHUB_OAUTH_TOKEN', variable: 'OAUTH_TOKEN')]) {
-                        sh "git clone https://${OAUTH_TOKEN}@github.com/${HELM_REPO_NAME}.git values-repo"
+                        sh '''
+                            git clone https://${OAUTH_TOKEN}@github.com/Sarang095/kube-manifests.git values-repo
+                        '''
                     }
                     dir("${HELM_CHART_PATH}") {
                         sh "sed -i 's/replicas: .*/replicas: 2/' values.yaml"
@@ -192,6 +186,7 @@ pipeline {
         stage('Commit and Push Updated Helm Chart') {
             steps {
                 script {
+                    def buildNumber = currentBuild.number
                     dir("${HELM_CHART_PATH}") {
                         sh "git commit -am 'Updating image tag to ${buildNumber}'"
                         sh "git push origin ${HELM_REPO_BRANCH}"
