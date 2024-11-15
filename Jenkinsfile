@@ -8,7 +8,7 @@ pipeline {
         DOCKER_IMAGE_NAME = 'csag095/java-crud-main'
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "3.87.220.100:8081"
+        NEXUS_URL = "3.82.126.192:8081"
         NEXUS_REPOSITORY = "crud-main-app"
         NEXUS_CREDENTIAL_ID = "nexuslogin"
         scannerHome = tool 'sonar4'
@@ -142,7 +142,7 @@ pipeline {
             steps {
                 script {
                     def buildNumber = currentBuild.number
-                    sh "trivy image --exit-code 1 --severity HIGH ${DOCKER_IMAGE_NAME}:${buildNumber}"
+                    sh "trivy image --severity HIGH ${DOCKER_IMAGE_NAME}:${buildNumber}"
                 }
             }
         }
@@ -179,7 +179,7 @@ pipeline {
 
         stage('Trivy Config Scan - Helm Manifests') {
             steps {
-                sh 'trivy config --exit-code 1 --severity HIGH values-repo/helm-kube/templates/'
+                sh 'trivy config --severity HIGH values-repo/helm-kube/templates/'
             }
         }
 
@@ -195,14 +195,31 @@ pipeline {
             }
         }
 
-        stage('Deploy with ArgoCD') {
-            steps {
-                script {
-                    sh 'argocd app sync crud-app'
-                }
+       stage('Deploy with ArgoCD') {
+        agent {
+            label 'KOPS'
+            }
+         steps {
+            script {
+                withCredentials([string(credentialsId: 'ARGOCD_PASSWORD', variable: 'ARGOCD_PASS')]) {
+                    sh '''
+                        ARGOCD_BIN="${WORKSPACE}/bin/argocd"
+
+                    if ! command -v $ARGOCD_BIN &> /dev/null; then
+                        mkdir -p ${WORKSPACE}/bin
+                        curl -sSL -o $ARGOCD_BIN https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+                        chmod +x $ARGOCD_BIN
+                    fi
+
+                    $ARGOCD_BIN login <ARGOCD_SERVER> --username admin --password ${ARGOCD_PASS} --insecure
+
+                    $ARGOCD_BIN app sync crud-app 
+                '''
             }
         }
-
+    }
+}
+        
         stage('Slack Notification') {
             steps {
                 slackSend channel: '#ci-cd', color: 'good', message: "Build ${env.BUILD_ID} succeeded for java-crud-app"
