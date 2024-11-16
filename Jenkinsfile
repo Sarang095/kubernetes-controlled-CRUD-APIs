@@ -8,7 +8,7 @@ pipeline {
         DOCKER_IMAGE_NAME = 'csag095/java-crud-main'
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "3.82.126.192:8081"
+        NEXUS_URL = "54.166.222.209:8081"
         NEXUS_REPOSITORY = "crud-main-app"
         NEXUS_CREDENTIAL_ID = "nexuslogin"
         scannerHome = tool 'sonar4'
@@ -39,7 +39,7 @@ pipeline {
             }
         }
 
-        stage ('CODE ANALYSIS WITH CHECKSTYLE') {
+        stage('CODE ANALYSIS WITH CHECKSTYLE') {
             steps {
                 sh 'mvn -s $WORKSPACE/settings.xml checkstyle:checkstyle'
             }
@@ -74,8 +74,8 @@ pipeline {
                     def trivyInstalled = sh(script: 'which trivy', returnStatus: true) == 0
                     if (!trivyInstalled) {
                         sh '''
-                        mkdir -p ${WORKSPACE}/bin
-                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ${WORKSPACE}/bin
+                            mkdir -p ${WORKSPACE}/bin
+                            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ${WORKSPACE}/bin
                         '''
                     } else {
                         echo 'Trivy is already installed'
@@ -173,12 +173,14 @@ pipeline {
                         sh "sed -i 's|repository: .*|repository: ${DOCKER_IMAGE_NAME}|' values.yaml"
                         sh "sed -i 's/tag: .*/tag: ${buildNumber}/' values.yaml"
                     }
+                    stash name: 'values-repo', includes: 'values-repo/**'
                 }
             }
         }
 
         stage('Trivy Config Scan - Helm Manifests') {
             steps {
+                unstash 'values-repo'
                 sh 'trivy config --severity HIGH values-repo/helm-kube/templates/'
             }
         }
@@ -195,34 +197,47 @@ pipeline {
             }
         }
 
-       stage('Deploy with ArgoCD') {
-        agent {
-            label 'KOPS'
+        stage('Deploy with kubectl') {
+            agent {
+                label 'KOPS'
             }
-         steps {
-            script {
-                withCredentials([string(credentialsId: 'ARGOCD_PASSWORD', variable: 'ARGOCD_PASS')]) {
+            steps {
+                // Clone the kube-manifests repository into /home/jenkins
+                withCredentials([string(credentialsId: 'GITHUB_OAUTH_TOKEN', variable: 'OAUTH_TOKEN')]) {
                     sh '''
-                        ARGOCD_BIN="${WORKSPACE}/bin/argocd"
+                        echo "Cloning kube-manifests repository into /home/jenkins..."
+                        cd /home/jenkins
+                        git clone https://${OAUTH_TOKEN}@github.com/Sarang095/kube-manifests.git
+                        ls -l /home/jenkins/kube-manifests  # Debugging: List files in the cloned repo
+                    '''
+                }
 
-                    if ! command -v $ARGOCD_BIN &> /dev/null; then
-                        mkdir -p ${WORKSPACE}/bin
-                        curl -sSL -o $ARGOCD_BIN https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-                        chmod +x $ARGOCD_BIN
-                    fi
-
-                    $ARGOCD_BIN login <ARGOCD_SERVER> --username admin --password ${ARGOCD_PASS} --insecure
-
-                    $ARGOCD_BIN app sync crud-app 
-                '''
+                // Apply Kubernetes Manifests with correct filename and debug info
+                script {
+                    echo "Applying Kubernetes manifests..."
+                    sh '''
+                        cd /home/jenkins/kube-manifests
+                        echo "Current directory:"
+                        pwd  # Debugging: Print current directory
+                        ls -l  # Debugging: List files in the current directory
+                        kubectl apply -f application.yml  # Correct file path and name
+                    '''
+                }
             }
         }
-    }
-}
-        
+
         stage('Slack Notification') {
             steps {
-                slackSend channel: '#ci-cd', color: 'good', message: "Build ${env.BUILD_ID} succeeded for java-crud-app"
+                script {
+                    slackSend channel: '#ci-cd', color: 'good', message: "Build ${env.BUILD_ID} succeeded for java-crud-app"
+                }
+            }
+            post {
+                failure {
+                    script {
+                        slackSend channel: '#ci-cd', color: 'danger', message: "Build ${env.BUILD_ID} failed for java-crud-app"
+                    }
+                }
             }
         }
     }
