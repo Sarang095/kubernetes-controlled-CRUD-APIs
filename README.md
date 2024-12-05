@@ -1,7 +1,7 @@
 # GitOps-Driven CI/CD Pipeline for CRUD Application Deployment on Kubernetes Cluster with Amazon EC2
 
 ## Repository for Kubernetes Manifests
-The Kubernetes manifests for this project are available at:  
+The Kubernetes manifests for this project:  
 [https://github.com/Sarang095/kube-manifests](https://github.com/Sarang095/kube-manifests)
 
 ## Overview
@@ -14,25 +14,27 @@ This project demonstrates the creation of a **GitOps-driven CI/CD pipeline** for
 - **Trivy** for Docker image and Kubernetes configuration vulnerability scanning
 - **AWS EC2** for hosting the Kubernetes cluster
 - **KOPS** for Kubernetes cluster provisioning on AWS
+- **Provisioned** SonarQube, Nexus and Jenkins Server using Bash Scripts on Amazon EC2
 - **Principle of Least Privilege (PoLP)** to minimize attack surfaces
 - **Slack** integrated for build faliure alerts   
 
 ## Project Workflow
 1. **CI/CD Pipeline**:
+   - **Provisioned** SonarQube, Nexus and Jenkins Server using Bash Scripts on Amazon EC2.
    - **Jenkins** handles the continuous integration, triggering build and test processes on code commit.
    - **SonarQube Server** analyzes the code, generating reports for code quality, including **Checkstyle**, **Surefire**, and **JaCoCo** reports.
    - **Trivy** performs vulnerability scans on Docker images and Kubernetes configurations to ensure there are no critical security risks before deployment.
    - **Nexus Sonatype Repository Server** stores the versioned artifact uploaded by Jenkins CI pipeline.
 
-2. **Deployment**:
+3. **Deployment**:
    - The application is deployed to **AWS EC2** through a **GitOps-based** pipeline, managed by **ArgoCD**.
    - **Trivy** ensures that container images and Kubernetes configurations are free of vulnerabilities by scanning them as part of the deployment pipeline.
 
-3. **Security**:
+4. **Security**:
    - **PoLP** is applied at both **container** and **cluster** levels, ensuring minimal access privileges and reducing the attack surface of the deployment environment.
    - The Kubernetes cluster is provisioned and managed using **KOPS** on **AWS EC2** to provide scalability and resilience with secure access.
   
-4. **Docker Image Optimization**
+5. **Docker Image Optimization**
    - Optimized the Docker image using multi-stage builds and Alpine base images,and layer optimizations reducing its size by **50%-70%**.
 
 ## Security Considerations
