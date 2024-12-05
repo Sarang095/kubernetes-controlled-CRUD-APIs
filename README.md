@@ -38,3 +38,22 @@ This project demonstrates the creation of a **GitOps-driven CI/CD pipeline** for
 ## Security Considerations
 - **Principle of Least Privilege (PoLP)** has been implemented at the **container** and **cluster** levels to minimize risk by limiting the privileges granted to users and components.
 - **Trivy** is used for intermidiate docker image scanning, and Kubernetes configurations are also scanned for analysing security risks before deployment.
+
+## Project Snapshots
+**Jenkins Pipeline Execution**
+![Screenshot 2024-11-16 215108](https://github.com/user-attachments/assets/48486fdf-5cb5-408a-8d64-a60d4fcf8f70)
+
+**Application Status on ArgoCD UI**
+![Screenshot 2024-11-16 214258](https://github.com/user-attachments/assets/7c58dae3-cc98-4d9d-9dab-090a2b61e98c)
+
+**Nexus Repository**
+![Screenshot 2024-11-16 185629](https://github.com/user-attachments/assets/4dbaceb9-55b3-4b26-b9a6-06dd6a2e3d9e)
+
+**SonarQube Analysis Report**
+![Screenshot 2024-11-16 215135](https://github.com/user-attachments/assets/6db1f0a2-e1c2-43bf-b03f-f5864e39d460)
+
+**Slack Notification**
+![Screenshot 2024-11-16 214849](https://github.com/user-attachments/assets/cc99148c-1dcd-471a-ba6a-a4e498f38925)
+
+**Testing**
+![Screenshot from 2024-09-30 18-21-36](https://github.com/user-attachments/assets/eea6b5a5-9182-4e9b-9bee-5fa8bd9efd0b)
